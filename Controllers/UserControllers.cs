@@ -15,11 +15,23 @@ namespace ANPCentral.Controllers
     {
         #region Get
         [HttpGet("users")]
-        public async Task<IActionResult> GetAsync([FromServices] UserDataContext context, IMapper mapper)
+        public async Task<IActionResult> GetAsync([FromServices] UserDataContext context)
         {
             var users = await context.Users.ToListAsync();
-            var usersDTO = mapper.Map<List<UserDTO>>(users);
-            return Ok(usersDTO);
+            var userDTOs = new List<UserDTO>();
+
+            foreach (var user in users)
+            {
+                var userDTO = new UserDTO
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    Email = user.Email
+                };
+                userDTOs.Add(userDTO);
+            }
+
+            return Ok(userDTOs);
 
         }
         #endregion
@@ -28,13 +40,20 @@ namespace ANPCentral.Controllers
         [HttpPost("users")]
         public async Task<IActionResult> PostAsync([FromBody] EditorUserViewModel body, [FromServices] UserDataContext context)
         {
+            var userInDatabase = await context.Users.FirstOrDefaultAsync((x) => x.Email == body.Email);
+
+
+            if (userInDatabase != null)
+                return StatusCode(409, new {message = "User with this e-mail already exists."});
+
             try
             {
+                var salt = BCrypt.Net.BCrypt.GenerateSalt();
                 var user = new User
                 {
                     Name = body.Name,
                     Email = body.Email,
-                    Password = BCrypt.Net.BCrypt.HashPassword(body.Password),
+                    Password = BCrypt.Net.BCrypt.HashPassword( body.Password, salt),
                 };
 
                 await context.AddAsync(user);
@@ -59,11 +78,19 @@ namespace ANPCentral.Controllers
         public async Task<IActionResult> GetByIdAsync([FromRoute] Guid id, [FromServices] UserDataContext context)
         {
             var user = await context.Users.FirstOrDefaultAsync((x) => x.Id == id);
-
             if (user == null)
                 return NotFound();
 
-            return Ok(user);
+            var userDTO = new UserDTO
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Email = user.Email,
+
+            };
+           
+
+            return Ok(userDTO);
         }
         #endregion
 
@@ -80,12 +107,12 @@ namespace ANPCentral.Controllers
             {
                 user.Name = body.Name;
                 user.Email = body.Email;
-                user.Password = body.Password;
+                user.Password = BCrypt.Net.BCrypt.HashPassword(body.Password);
 
                 context.Users.Update(user);
                 await context.SaveChangesAsync();
 
-                return Ok(body);
+                return Ok(user);
 
             } catch
             {
@@ -126,7 +153,7 @@ namespace ANPCentral.Controllers
         [FromServices] UserDataContext context,
         [FromServices] TokenService tokenService)
         {
-  
+
             var user = await context
                 .Users
                 .FirstOrDefaultAsync(x => x.Email == body.Email);
@@ -134,10 +161,9 @@ namespace ANPCentral.Controllers
             if (user == null)
                 return StatusCode(401, new { message = "E-mail or password invalid" });
 
-            var passwordHasher = new PasswordHasher<User>();
-            var passwordVerificationResult = passwordHasher.VerifyHashedPassword(user, user.Password, body.Password);
+            var passwordVerificationResult = BCrypt.Net.BCrypt.Verify(body.Password, user.Password);
 
-            if (passwordVerificationResult == PasswordVerificationResult.Success)
+            if (passwordVerificationResult == true)
             {
                 try
                 {
@@ -149,7 +175,7 @@ namespace ANPCentral.Controllers
                     return StatusCode(500, new { message = "Internal Server Error" });
                 }
             }
-
+           
             return StatusCode(401, new { message = "E-mail or password invalid" });
         }
 

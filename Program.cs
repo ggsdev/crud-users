@@ -1,4 +1,7 @@
 using ANPCentral.Data;
+using ANPCentral.Models;
+using ANPCentral.Services;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,13 +9,12 @@ builder.Services.AddControllers();
 
 builder.Services.AddDbContext<UserDataContext>();
 
-builder.Services.AddAutoMapper(typeof(Program));
+builder.Services.AddScoped<TokenService>();
 
 var app = builder.Build();
 
 //app.UseHttpsRedirection();
-
-app.UseAuthorization();
+app.UseAuthentication();
 
 app.MapControllers();
 
