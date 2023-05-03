@@ -1,9 +1,10 @@
 using ANPCentral.Data;
 using ANPCentral.ViewModels;
-using Blog.Models;
+using ANPCentral.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using BCrypt.Net;
+using AutoMapper;
+using ANPCentral.DTOS;
 
 namespace ANPCentral.Controllers
 {
@@ -11,10 +12,11 @@ namespace ANPCentral.Controllers
     public class UserControllers : ControllerBase
     {
         [HttpGet("users")]
-        public async Task<IActionResult> GetAsync([FromServices] UserDataContext context)
+        public async Task<IActionResult> GetAsync([FromServices] UserDataContext context, IMapper mapper)
         {
             var users = await context.Users.ToListAsync();
-            return Ok(users);
+            var usersDTO = mapper.Map<List<UserDTO>>(users);
+            return Ok(usersDTO);
 
         }
 
@@ -27,8 +29,7 @@ namespace ANPCentral.Controllers
                 {
                     Name = body.Name,
                     Email = body.Email,
-                    //Password = BCrypt.Net.HashPassword(body.Password)
-                    Password = body.Password
+                    Password = BCrypt.Net.BCrypt.HashPassword(body.Password),
                 };
 
                 await context.AddAsync(user);
