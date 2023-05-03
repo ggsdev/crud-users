@@ -5,12 +5,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AutoMapper;
 using ANPCentral.DTOS;
+using ANPCentral.Services;
+using Microsoft.AspNetCore.Identity;
 
 namespace ANPCentral.Controllers
 {
     [ApiController]
     public class UserControllers : ControllerBase
     {
+        #region Get
         [HttpGet("users")]
         public async Task<IActionResult> GetAsync([FromServices] UserDataContext context, IMapper mapper)
         {
@@ -19,7 +22,9 @@ namespace ANPCentral.Controllers
             return Ok(usersDTO);
 
         }
+        #endregion
 
+        #region Create
         [HttpPost("users")]
         public async Task<IActionResult> PostAsync([FromBody] EditorUserViewModel body, [FromServices] UserDataContext context)
         {
@@ -47,7 +52,9 @@ namespace ANPCentral.Controllers
             }
            
         }
+        #endregion
 
+        #region Get By Id
         [HttpGet("users/{id:Guid}")]
         public async Task<IActionResult> GetByIdAsync([FromRoute] Guid id, [FromServices] UserDataContext context)
         {
@@ -58,7 +65,9 @@ namespace ANPCentral.Controllers
 
             return Ok(user);
         }
+        #endregion
 
+        #region Update
         [HttpPut("users/{id:Guid}")]
         public async Task<IActionResult> UpdateAsync([FromRoute] Guid id ,[FromBody] EditorUserViewModel body, [FromServices] UserDataContext context)
         {
@@ -84,7 +93,9 @@ namespace ANPCentral.Controllers
 
             }
         }
+        #endregion
 
+        #region Delete
         [HttpDelete("users/{id:Guid}")]
         public async Task<IActionResult> DeleteAsync([FromRoute] Guid id, [FromServices] UserDataContext context)
         {
@@ -106,5 +117,42 @@ namespace ANPCentral.Controllers
             }
 
         }
+        #endregion
+
+        #region Login
+        [HttpPost("users/login")]
+        public async Task<IActionResult> Login(
+        [FromBody] LoginViewModel body,
+        [FromServices] UserDataContext context,
+        [FromServices] TokenService tokenService)
+        {
+  
+            var user = await context
+                .Users
+                .FirstOrDefaultAsync(x => x.Email == body.Email);
+
+            if (user == null)
+                return StatusCode(401, new { message = "E-mail or password invalid" });
+
+            var passwordHasher = new PasswordHasher<User>();
+            var passwordVerificationResult = passwordHasher.VerifyHashedPassword(user, user.Password, body.Password);
+
+            if (passwordVerificationResult == PasswordVerificationResult.Success)
+            {
+                try
+                {
+                    var token = tokenService.GenerateToken(user);
+                    return Ok(new { token });
+                }
+                catch
+                {
+                    return StatusCode(500, new { message = "Internal Server Error" });
+                }
+            }
+
+            return StatusCode(401, new { message = "E-mail or password invalid" });
+        }
+
+        #endregion
     }
 }
