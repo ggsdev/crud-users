@@ -15,7 +15,7 @@ namespace ANPCentral.Controllers
     {
         #region Get
         [HttpGet("users")]
-        public async Task<IActionResult> GetAsync([FromServices] UserDataContext context)
+        public async Task<IActionResult> GetAsync([FromServices] DataContext context)
         {
             var users = await context.Users.ToListAsync();
             var userDTOs = new List<UserDTO>();
@@ -38,7 +38,7 @@ namespace ANPCentral.Controllers
 
         #region Create
         [HttpPost("users")]
-        public async Task<IActionResult> PostAsync([FromBody] EditorUserViewModel body, [FromServices] UserDataContext context)
+        public async Task<IActionResult> PostAsync([FromBody] EditorUserViewModel body, [FromServices] DataContext context)
         {
             var userInDatabase = await context.Users.FirstOrDefaultAsync((x) => x.Email == body.Email);
 
@@ -75,7 +75,7 @@ namespace ANPCentral.Controllers
 
         #region Get By Id
         [HttpGet("users/{id:Guid}")]
-        public async Task<IActionResult> GetByIdAsync([FromRoute] Guid id, [FromServices] UserDataContext context)
+        public async Task<IActionResult> GetByIdAsync([FromRoute] Guid id, [FromServices] DataContext context)
         {
             var user = await context.Users.FirstOrDefaultAsync((x) => x.Id == id);
             if (user == null)
@@ -94,9 +94,43 @@ namespace ANPCentral.Controllers
         }
         #endregion
 
-        #region Update
+        #region Update PATCH
+        [HttpPatch("users/{id:Guid}")]
+        public async Task<IActionResult> UpdatePartialAsync([FromRoute] Guid id, [FromBody] EditorUserViewModel body, [FromServices] DataContext context)
+        {
+            var user = await context.Users.FirstOrDefaultAsync((x) => x.Id == id);
+
+            if (user == null)
+                return NotFound();
+
+            try
+            {
+                if (body.Name != null) user.Name = body.Name;
+
+                if (body.Password != null) user.Password = BCrypt.Net.BCrypt.HashPassword(body.Password);
+
+                if (body.Email != null) {
+
+
+
+                    user.Email = body.Email;
+                 };
+
+                context.Users.Update(user);
+                await context.SaveChangesAsync();
+
+                return Ok(user);
+            }
+            catch
+            {
+                return StatusCode(500, new { message = "Internal Server Error" });
+            }
+        }
+        #endregion
+
+        #region Update PUT
         [HttpPut("users/{id:Guid}")]
-        public async Task<IActionResult> UpdateAsync([FromRoute] Guid id ,[FromBody] EditorUserViewModel body, [FromServices] UserDataContext context)
+        public async Task<IActionResult> UpdateAllAsync([FromRoute] Guid id ,[FromBody] EditorUserViewModel body, [FromServices] DataContext context)
         {
             var user = await context.Users.FirstOrDefaultAsync((x) => x.Id == id);
 
@@ -124,7 +158,7 @@ namespace ANPCentral.Controllers
 
         #region Delete
         [HttpDelete("users/{id:Guid}")]
-        public async Task<IActionResult> DeleteAsync([FromRoute] Guid id, [FromServices] UserDataContext context)
+        public async Task<IActionResult> DeleteAsync([FromRoute] Guid id, [FromServices] DataContext context)
         {
             var user = await context.Users.FirstOrDefaultAsync((x) => x.Id == id);
 
@@ -134,6 +168,7 @@ namespace ANPCentral.Controllers
             try
             {
                 context.Users.Remove(user);
+                
                 await context.SaveChangesAsync();
 
                 return NoContent();
@@ -150,10 +185,9 @@ namespace ANPCentral.Controllers
         [HttpPost("users/login")]
         public async Task<IActionResult> Login(
         [FromBody] LoginViewModel body,
-        [FromServices] UserDataContext context,
+        [FromServices] DataContext context,
         [FromServices] TokenService tokenService)
         {
-
             var user = await context
                 .Users
                 .FirstOrDefaultAsync(x => x.Email == body.Email);

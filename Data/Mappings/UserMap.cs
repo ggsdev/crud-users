@@ -27,6 +27,12 @@ namespace ANPCentral.Data.Mappings
             builder.Property(x => x.Password)
                 .IsRequired();
 
+            builder.Property(x => x.CreatedAt).ValueGeneratedOnAdd();
+
+            builder.Property(x => x.DeletedAt);
+
+            builder.Property(x => x.IsActive);
+
         }
     }
 }

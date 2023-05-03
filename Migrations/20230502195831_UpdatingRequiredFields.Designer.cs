@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace ANPCentral.Migrations
 {
-    [DbContext(typeof(UserDataContext))]
+    [DbContext(typeof(DataContext))]
     [Migration("20230502195831_UpdatingRequiredFields")]
     partial class UpdatingRequiredFields
     {

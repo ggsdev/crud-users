@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddDbContext<UserDataContext>();
+builder.Services.AddDbContext<DataContext>();
 
 builder.Services.AddScoped<TokenService>();
 
