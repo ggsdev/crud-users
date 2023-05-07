@@ -28,8 +28,11 @@ namespace ANPCentral.Controllers
         [HttpPost("users")]
         public async Task<IActionResult> PostAsync([FromBody] EditorUserViewModel body, [FromServices] UserDataContext context)
         {
-            try
-            {
+            var userInDatabase = await context.Users.FirstOrDefaultAsync(u => u.Email == body.Email);
+
+            if (userInDatabase != null)
+                return Conflict(new { message = "User Already exists" });
+
                 var user = new User
                 {
                     Name = body.Name,
@@ -41,16 +44,8 @@ namespace ANPCentral.Controllers
                 await context.SaveChangesAsync();
 
                 return Created($"users/{user.Id}", user);
-            }
-            catch(DbUpdateException)
-            {
-                return BadRequest();
-            }
-            catch
-            {
-                return StatusCode(500, new { message = "Internal Server Error" });
-            }
-           
+         
+
         }
         #endregion
 
@@ -95,27 +90,22 @@ namespace ANPCentral.Controllers
         }
         #endregion
 
-        #region Delete
+        #region Soft Delete
         [HttpDelete("users/{id:Guid}")]
-        public async Task<IActionResult> DeleteAsync([FromRoute] Guid id, [FromServices] UserDataContext context)
+        public async Task<IActionResult> DeleteAsync([FromServices] UserDataContext context)
         {
-            var user = await context.Users.FirstOrDefaultAsync((x) => x.Id == id);
 
-            if (user == null)
-                return NotFound();
-
-            try
+            if (HttpContext.Items.TryGetValue("user", out var userObj) && userObj is User user)
             {
-                context.Users.Remove(user);
+
+                user.IsActive = false;
+                user.UpdatedAt = DateTime.Now;
                 await context.SaveChangesAsync();
 
                 return NoContent();
             }
-            catch
-            {
-                return StatusCode(500, new { message = "Internal Server Error" });
-            }
 
+            return NotFound();
         }
         #endregion
 

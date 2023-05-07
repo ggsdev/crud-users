@@ -10,7 +10,7 @@ namespace ANPCentral.Data.Mappings
         {
 
             builder.ToTable
-                ("User");
+                ("Users");
 
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Id)
@@ -24,6 +24,10 @@ namespace ANPCentral.Data.Mappings
 
             builder.Property(x => x.Email)
                 .IsRequired();
+
+            builder.HasIndex(x => x.Email)
+                .IsUnique();
+                
             builder.Property(x => x.Password)
                 .IsRequired();
 
