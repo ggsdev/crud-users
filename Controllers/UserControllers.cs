@@ -7,6 +7,9 @@ using AutoMapper;
 using ANPCentral.DTOS;
 using ANPCentral.Services;
 using Microsoft.AspNetCore.Identity;
+using System.Text.Json.Serialization;
+using System.Text.Json;
+using System.Net;
 
 namespace ANPCentral.Controllers
 {
@@ -33,17 +36,45 @@ namespace ANPCentral.Controllers
             if (userInDatabase != null)
                 return Conflict(new { message = "User Already exists" });
 
-                var user = new User
+            var user = new User
+            {
+                Name = body.Name,
+                Email = body.Email,
+                Password = BCrypt.Net.BCrypt.HashPassword(body.Password)
+            };
+
+            if (body.Address != null)
+            {
+                var address = new Address
                 {
-                    Name = body.Name,
-                    Email = body.Email,
-                    Password = BCrypt.Net.BCrypt.HashPassword(body.Password),
+                    Street = body.Address.Street,
+                    City = body.Address.City,
+                    Complement = body.Address.Complement
                 };
 
-                await context.AddAsync(user);
-                await context.SaveChangesAsync();
+                user.Address = address;
+            }
 
-                return Created($"users/{user.Id}", user);
+            await context.AddAsync(user);
+            await context.SaveChangesAsync();
+
+            var response = new UserDTO
+            {
+                UserId = user.Id,
+                Name = user.Name,
+                Email = user.Email,
+                Password = user.Password,
+                Address = user.Address != null ? new AddressDto
+                {
+                    AddressId = user.Address.Id,
+                    Street = user.Address.Street,
+                    City = user.Address.City,
+                    Complement = user.Address.Complement
+                } : null
+            };
+
+
+            return Created($"users/{user.Id}", response);
          
 
         }
@@ -64,29 +95,24 @@ namespace ANPCentral.Controllers
 
         #region Update
         [HttpPut("users/{id:Guid}")]
-        public async Task<IActionResult> UpdateAsync([FromRoute] Guid id ,[FromBody] EditorUserViewModel body, [FromServices] UserDataContext context)
+        public async Task<IActionResult> UpdateAsync([FromBody] EditorUserViewModel body, [FromServices] UserDataContext context)
         {
-            var user = await context.Users.FirstOrDefaultAsync((x) => x.Id == id);
-
-            if (user == null)
-                return NotFound();
-
-            try
+            if (HttpContext.Items.TryGetValue("user", out var userObj) && userObj is User user)
             {
                 user.Name = body.Name;
                 user.Email = body.Email;
-                user.Password = body.Password;
+                user.Password = BCrypt.Net.BCrypt.HashPassword(body.Password);
+                user.UpdatedAt = DateTime.Now;
+
 
                 context.Users.Update(user);
                 await context.SaveChangesAsync();
 
                 return Ok(body);
 
-            } catch
-            {
-                return StatusCode(500, new { message = "Internal Server Error" });
-
             }
+
+            return NotFound();          
         }
         #endregion
 

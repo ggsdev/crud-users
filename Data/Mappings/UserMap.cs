@@ -30,7 +30,6 @@ namespace ANPCentral.Data.Mappings
                 
             builder.Property(x => x.Password)
                 .IsRequired();
-
         }
     }
 }

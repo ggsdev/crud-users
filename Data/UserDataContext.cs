@@ -7,6 +7,7 @@ namespace ANPCentral.Data
     public class UserDataContext : DbContext
     {
         public DbSet<User> Users { get; set; }
+        public DbSet<Address> Addresses { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseSqlServer("Server=localhost;Database=ANPCentralDB;User ID=garcia;Password=2480;Encrypt=false;Trusted_Connection=True;");
@@ -16,7 +17,8 @@ namespace ANPCentral.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(new UserMap());
-            
+            modelBuilder.ApplyConfiguration(new AddressMap());
+
         }
     }
 }
